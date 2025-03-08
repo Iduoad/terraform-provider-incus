@@ -16,13 +16,13 @@ permissions:
 name: Test
 jobs:
   acceptance-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         go-version:
-          - "1.21"
-          - "1.22"
+          - oldstable
+          - stable
         incus-version:
           - daily
           - stable
@@ -69,12 +69,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes \
             ovn-host \
-            ovn-central
+            ovn-central \
+            ovn-ic \
+            ovn-ic-db
 
           sudo ovs-vsctl set open_vswitch . \
             external_ids:ovn-remote=unix:/var/run/ovn/ovnsb_db.sock \
             external_ids:ovn-encap-type=geneve \
             external_ids:ovn-encap-ip=127.0.0.1
+
+          sudo ovn-nbctl set NB_Global . \
+            name=region \
+            options:ic-route-adv=true \
+            options:ic-route-learn=true
+          sudo ovs-vsctl set open_vswitch . external_ids:ovn-is-interconn=true
 
           sudo systemctl restart incus
 
@@ -89,13 +97,13 @@ jobs:
           make test
 
   build-platforms:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         go-version:
-          - "1.21"
-          - "1.22"
+          - oldstable
+          - stable
 
     steps:
       - uses: actions/checkout@v4
@@ -111,13 +119,13 @@ jobs:
           args: build --snapshot
 
   check-lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         go-version:
-          - "1.21"
-          - "1.22"
+          - oldstable
+          - stable
 
     steps:
       - uses: actions/checkout@v4
